@@ -2,12 +2,23 @@ RSpec::Matchers.define(:parse) do |input, opts|
   as = block = nil
   result = trace = nil
 
+  diffable
+  attr_reader :expected
+
   match do |parser|
     begin
       result = parser.parse(input)
-      block ? 
-        block.call(result) : 
-        (as == result || as.nil?)
+      if block
+        block.call(result)
+      else
+        @actual = if result.respond_to?(:deep_transform_values)
+          result.deep_transform_values(&:to_s)
+        else
+          result
+        end
+        @expected = as
+        as == result || as.nil?
+      end
     rescue Parslet::ParseFailed => ex
       trace = ex.parse_failure_cause.ascii_tree if opts && opts[:trace]
       false
